@@ -104,7 +104,6 @@
       (group upper (0+ (any word nonascii digit "_")))
       symbol-end))
 
-(defconst reason-re-ident "[[:word:][:multibyte:]_][[:word:][:multibyte:]_[:digit:]]*")
 (defun reason-re-word (inner) (concat "\\<" inner "\\>"))
 (defun reason-re-grab (inner) (concat "\\(" inner "\\)"))
 
