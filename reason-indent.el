@@ -117,8 +117,6 @@ This is written mainly to be used as `end-of-defun-function' for Reason."
                      (= current-level function-level)))
         (goto-char function-start)))))
 
-
-
 (defun reason-mode-indent-line ()
   (interactive)
   (let ((indent
@@ -136,17 +134,15 @@ This is written mainly to be used as `end-of-defun-function' for Reason."
                        0
                       (save-excursion
                         (reason-rewind-irrelevant)
-                        ;; (backward-up-list)
+                        (backward-up-list)
                         (reason-rewind-to-beginning-of-current-level-expr)
-
-                        (if (or (looking-at "|") (looking-at "switch"))
-                            (current-column)
-                          (+ (current-column) reason-indent-offset))
-
-                        ))))
+                        ;; was | only
+                        (if (looking-at "|")
+                            (+ (current-column) (* reason-indent-offset 2))
+                            (+ (current-column) reason-indent-offset))))))
              (cond
               ;; A function return type is indented to the corresponding function arguments
-              ((looking-at "->")
+              ((looking-at "=>")
                (save-excursion
                  (backward-list)
                  (or (reason-align-to-expr-after-brace)
@@ -232,7 +228,7 @@ This is written mainly to be used as `end-of-defun-function' for Reason."
 
                 (progn
                   (back-to-indentation)
-                  (cond ((looking-at (regexp-opt '("constraint" "and" "type")))
+                  (cond ((looking-at (regexp-opt '("and" "type")))
                          baseline)
                         ((save-excursion
                          (reason-rewind-irrelevant)
@@ -242,8 +238,7 @@ This is written mainly to be used as `end-of-defun-function' for Reason."
                            (while (looking-at "|")
                              (reason-rewind-irrelevant)
                              (back-to-indentation))
-                           (looking-at (regexp-opt '("type")))
-                           )
+                           (looking-at (regexp-opt '("type"))))
                          (+ baseline reason-indent-offset))
                         ((looking-at "|\\|/[/*]")
                          baseline)
@@ -252,9 +247,7 @@ This is written mainly to be used as `end-of-defun-function' for Reason."
                          (looking-back "[{;,\\[(]" (- (point) 2)))
                          baseline)
                         (t
-                         (+ baseline reason-indent-offset)
-                         )
-                        )
+                         (+ baseline reason-indent-offset)))
                   ;; Point is now at the beginning of the current line
                   ))))))))
 
