@@ -53,7 +53,7 @@
     ;; Strings
     (modify-syntax-entry ?\" "\"" table)
     (modify-syntax-entry ?\\ "\\" table)
-    (modify-syntax-entry ?\' "\"'"  table)
+    (modify-syntax-entry ?\' "_"  table)
 
     ;; Comments
     (modify-syntax-entry ?/  ". 124b" table)
@@ -103,6 +103,12 @@
   (rx symbol-start
       (group upper (0+ (any word nonascii digit "_")))
       symbol-end))
+
+(defconst reason--char-literal-rx
+  (rx (seq (group "'")
+           (or (seq "\\" anything)
+               (not (any "'\\")))
+           (group "'"))))
 
 (defun reason-re-word (inner) (concat "\\<" inner "\\>"))
 (defun reason-re-grab (inner) (concat "\\(" inner "\\)"))
@@ -155,6 +161,29 @@
 (defalias 'reason-parent-mode
   (if (fboundp 'prog-mode) 'prog-mode 'fundamental-mode))
 
+(defun reason--syntax-propertize-raw-string (end)
+  (let ((ppss (syntax-ppss)))
+    (when (eq t (nth 3 ppss))
+      (let ((key (save-excursion
+                   (goto-char (nth 8 ppss))
+                   (and (looking-at "{\\([a-z]*\\)|")
+                        (match-string 1)))))
+        (when (re-search-forward (format "|%s}" (regexp-quote key)) end 'move)
+          (put-text-property (1- (match-end 0)) (match-end 0)
+                             'syntax-table (string-to-syntax "|")))))))
+
+(defun reason-syntax-propertize-function (start end)
+  (goto-char start)
+  (reason--syntax-propertize-raw-string end)
+  (funcall
+   (syntax-propertize-rules
+    (reason--char-literal-rx (1 "\"") (2 "\""))
+    ;; multi line strings
+    ("\\({\\)[a-z]*|"
+     (1 (prog1 "|"
+          (goto-char (match-end 0))
+          (reason--syntax-propertize-raw-string end)))))
+   (point) end))
 
 ;;;###autoload
 (define-derived-mode reason-mode reason-parent-mode "Reason"
@@ -164,6 +193,8 @@
   :group 'reason-mode
   :syntax-table reason-mode-syntax-table
 
+  ;; Syntax
+  (setq-local syntax-propertize-function #'reason-syntax-propertize)
   ;; Indentation
   (setq-local indent-line-function 'reason-mode-indent-line)
   ;; Fonts
